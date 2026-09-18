@@ -1,0 +1,392 @@
+/* ===========================================================
+   KTX Portal — bảng màu & kiểu chữ riêng cho hệ thống quản lý
+   ký túc xá: cảm giác "sổ sách", đáng tin cậy, dễ đọc số liệu.
+   =========================================================== */
+
+:root {
+  --bg: #EFECE3;
+  --paper: #FFFFFF;
+  --ink:black ;
+  --ink-soft: #5B6357;
+  --line: #DAD5C6;
+
+  --pine: rgb(15, 87, 52);      /* xanh thông đậm — màu chủ đạo, sidebar */
+  --pine-soft: #3D6350;
+  --brass: #A9782E;     /* vàng đồng — điểm nhấn hành động chính */
+  --brass-soft: #C99A4C;
+  --brick: #9C4230;     /* đỏ gạch — cảnh báo, nợ quá hạn */
+  --moss: #4C7A56;      /* xanh rêu — thành công, đã thanh toán */
+
+  --radius: 6px;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* Dam bao thuoc tinh "hidden" luon thang the, khong bi cac class
+   nhu .auth-form (display:flex) hay .app-shell (display:grid) de len.
+   Neu khong co dong nay, form dang ky va dang nhap se hien thi CUNG LUC. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; }
+
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; font-size: 14px; }
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+/* ---------- Màn hình đăng nhập / đăng ký ---------- */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1100px 480px at 12% -10%, #33553f 0%, transparent 60%),
+    var(--pine);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  box-shadow: 0 24px 60px rgba(15, 25, 18, 0.35);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+
+.auth-brand-mark {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  background: var(--pine);
+  color: #EFECE3;
+  padding: 5px 9px;
+  border-radius: 4px;
+}
+
+.auth-brand-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+}
+
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 10px 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.auth-tab.is-active {
+  color: var(--pine);
+  border-bottom-color: var(--brass);
+}
+
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.auth-form input {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #FBFAF6;
+  color: var(--ink);
+}
+
+.auth-form input:focus { border-color: var(--pine); }
+
+.auth-hint { font-size: 12px; color: var(--ink-soft); text-align: center; margin: 4px 0 0; }
+.auth-hint code {
+  font-family: var(--font-mono);
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.auth-message {
+  margin-top: 14px;
+  padding: 9px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #F3E7E3;
+  color: var(--brick);
+  border: 1px solid #E3C6BD;
+}
+.auth-message.is-success {
+  background: #E7F0E9;
+  color: var(--moss);
+  border-color: #C4DBC9;
+}
+
+/* ---------- Bố cục ứng dụng chính ---------- */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--pine);
+  color: #EFECE3;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 0 8px 20px;
+}
+
+.sidebar-brand .auth-brand-mark { background: rgba(255,255,255,0.14); color: #fff; }
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.sidebar-nav button {
+  text-align: left;
+  background: none;
+  border: none;
+  color: #D7DFD4;
+  padding: 10px 12px;
+  border-radius: 5px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.sidebar-nav button:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+.sidebar-nav button.is-active {
+  background: var(--brass);
+  color: #241A08;
+}
+
+.sidebar-nav .nav-group-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: #93A492;
+  padding: 14px 12px 4px;
+}
+
+.btn-logout {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #EFECE3;
+  padding: 9px 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.08); }
+
+.main { display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.topbar h1 { font-size: 19px; }
+
+.user-chip { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
+
+.role-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--pine);
+}
+
+.app-content { padding: 28px 32px 60px; overflow-y: auto; }
+
+/* ---------- Thành phần dùng lại trong nội dung ---------- */
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+
+.panel h2 { font-size: 15px; margin-bottom: 4px; }
+.panel .panel-desc { font-size: 13px; color: var(--ink-soft); margin: 0 0 16px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.form-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.form-row input, .form-row select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #FBFAF6;
+}
+
+.btn {
+  border: none;
+  border-radius: 5px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.btn-primary { background: var(--brass); color: #241A08; }
+.btn-primary:hover { background: var(--brass-soft); }
+
+.btn-outline {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--pine);
+}
+.btn-outline:hover { border-color: var(--pine); }
+
+.btn-block { width: 100%; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.data-table th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.data-table td { padding: 10px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table .num { font-family: var(--font-mono); font-size: 13px; }
+
+.tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+.tag-trong { background: #E7F0E9; color: var(--moss); }
+.tag-day { background: #EFEAE0; color: var(--ink-soft); }
+.tag-cho { background: #F5EEDC; color: var(--brass); }
+.tag-duyet { background: #E7F0E9; color: var(--moss); }
+.tag-tuchoi, .tag-quahan { background: #F3E7E3; color: var(--brick); }
+
+.empty-state {
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat-box {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.stat-box .stat-label { font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+.stat-box .stat-value { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--pine); }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--pine);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  z-index: 50;
+}
+.toast.is-error { background: var(--brick); }
+
+@media (max-width: 760px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .topbar { padding: 16px 18px; }
+  .app-content { padding: 18px; }
+}
