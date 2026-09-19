@@ -303,12 +303,20 @@ async function renderSvTongQuan(el) {
       </div>`;
   }
 
+  // Dung optional chaining (?.) de khong lam vo trang neu du lieu long nhau bi thieu
+  const tenToaNha = hdHienTai?.giuong?.phong?.toaNha?.tenToaNha;
+  const soPhong = hdHienTai?.giuong?.phong?.soPhong;
+  const kyHieu = hdHienTai?.giuong?.kyHieu;
+
   el.innerHTML = `
     <div class="panel">
       <h2>Chỗ ở hiện tại</h2>
       ${hdHienTai
-        ? `<p class="panel-desc">Bạn đang ở <strong>${hdHienTai.giuong.phong.toaNha.tenToaNha} — Phòng ${hdHienTai.giuong.phong.soPhong}</strong>,
-           giường <strong>${hdHienTai.giuong.kyHieu}</strong>, từ ngày ${hdHienTai.ngayBatDau}.</p>`
+        ? (tenToaNha
+            ? `<p class="panel-desc">Bạn đang ở <strong>${tenToaNha} — Phòng ${soPhong}</strong>,
+               giường <strong>${kyHieu}</strong>, từ ngày ${hdHienTai.ngayBatDau}.</p>`
+            : `<p class="panel-desc">Bạn đang có hợp đồng ở hiệu lực nhưng hệ thống thiếu dữ liệu chi tiết phòng.
+               Vui lòng liên hệ ban quản lý để kiểm tra lại.</p>`)
         : `<p class="panel-desc">Bạn chưa có chỗ ở. Hãy vào mục <strong>Đăng ký phòng</strong> để chọn phòng còn trống.</p>`}
     </div>
     ${hoaDonHtml}`;
@@ -409,8 +417,8 @@ async function renderSvHopDong(el) {
       <th>Phòng</th><th>Giường</th><th>Ngày bắt đầu</th><th>Trạng thái</th>
     </tr></thead><tbody>` +
     list.map(h => `<tr>
-        <td>${h.giuong.phong.toaNha.tenToaNha} — P.${h.giuong.phong.soPhong}</td>
-        <td>${h.giuong.kyHieu}</td>
+        <td>${h.giuong?.phong?.toaNha?.tenToaNha ?? "—"} — P.${h.giuong?.phong?.soPhong ?? "—"}</td>
+        <td>${h.giuong?.kyHieu ?? "—"}</td>
         <td>${h.ngayBatDau}</td>
         <td>${h.conHieuLuc ? '<span class="tag tag-duyet">Đang hiệu lực</span>' : '<span class="tag tag-day">Đã kết thúc</span>'}</td>
       </tr>`).join("") + `</tbody></table></div>`;

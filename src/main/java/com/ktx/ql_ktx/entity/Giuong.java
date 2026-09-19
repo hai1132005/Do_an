@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "giuong")
 @Getter
@@ -18,7 +18,6 @@ public class Giuong {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phong_id", nullable = false)
-    @JsonIgnore
     private Phong phong;
 
     @Column(nullable = false, length = 10)
