@@ -57,7 +57,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                .requestMatchers("/", "/index.html", "/sinh-vien.html", "/quan-ly-toa-nha.html", "/ban-quan-ly.html",
+                        "/css/**", "/js/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 // VNPay sandbox redirect trinh duyet sinh vien ve day SAU KHI thanh toan,
                 // khong kem JWT - an toan dua vao chu ky HMAC-SHA512 (VnPayService.xacThucChuKy),

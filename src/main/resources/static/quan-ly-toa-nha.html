@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý tòa nhà — KTX Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- ============ ỨNG DỤNG CHÍNH SAU KHI ĐĂNG NHẬP ============ -->
+<div id="screen-app" class="app-shell" hidden>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="auth-brand-mark">KTX</span>
+      <span>Portal</span>
+    </div>
+    <nav id="sidebar-nav" class="sidebar-nav"></nav>
+    <button id="btn-logout" class="btn-logout">Đăng xuất</button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1 id="topbar-title">Tổng quan</h1>
+      <div class="user-chip">
+        <span id="user-name">—</span>
+        <span id="user-role" class="role-badge">—</span>
+      </div>
+    </header>
+
+    <div id="app-content" class="app-content"></div>
+  </main>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/quan-ly-toa-nha.js"></script>
+<script>
+khoiDongTrang(["QUAN_LY_TOA_NHA"], () => [["Quản lý tòa nhà — " + (state.toaNhaTen || ""), NAV_QL]]);
+</script>
+</body>
+</html>
