@@ -26,6 +26,7 @@ public class ChiSoService {
     @Autowired private HoaDonRepository hoaDonRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
     @Autowired private HoaDonCaNhanService hoaDonCaNhanService;
+    @Autowired private HoaDonCaNhanRepository hoaDonCaNhanRepository;
 
     // Gia nuoc co dinh: dong/m3 - co the doi thanh cau hinh trong DB neu can
     private static final BigDecimal GIA_NUOC_M3 = new BigDecimal("15000");
@@ -132,5 +133,39 @@ public class ChiSoService {
         hoaDonCaNhanService.chiaHoaDonTheoSinhVien(hd, cs.getThang(), cs.getNam());
 
         return hd;
+    }
+
+    /** Chi so cuoi cung da ghi cua phong (de form hien "chi so cu"). Chua ghi lan nao -> 0/0. */
+    public java.util.Map<String, Object> chiSoCuCuaPhong(Long phongId) {
+        var cs = chiSoRepository.findTopByPhongIdOrderByNamDescThangDesc(phongId);
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("dienCu", cs.map(ChiSoDienNuoc::getChiSoDienMoi).orElse(0.0));
+        m.put("nuocCu", cs.map(ChiSoDienNuoc::getChiSoNuocMoi).orElse(0.0));
+        m.put("kyCuoi", cs.map(c -> c.getThang() + "/" + c.getNam()).orElse(null));
+        return m;
+    }
+
+    /**
+     * Xoa hoa don cua phong (phuc vu test/sua sai): xoa cac hoa don ca nhan,
+     * hoa don phong va ban ghi chi so cua ky do. Chi cho xoa ky GHI GAN NHAT
+     * cua phong, vi chi so cu cua thang sau lay tu chi so moi cua thang truoc.
+     */
+    @Transactional
+    public void xoaHoaDon(Long hoaDonId) {
+        HoaDon hd = hoaDonRepository.findById(hoaDonId)
+                .orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoa don"));
+        ChiSoDienNuoc cs = hd.getChiSo();
+        if (cs != null) {
+            var moiNhat = chiSoRepository.findTopByPhongIdOrderByNamDescThangDesc(hd.getPhong().getId());
+            if (moiNhat.isPresent() && !moiNhat.get().getId().equals(cs.getId())) {
+                throw new IllegalStateException("Chi xoa duoc hoa don cua ky ghi gan nhat cua phong ("
+                        + moiNhat.get().getThang() + "/" + moiNhat.get().getNam()
+                        + "). Hay xoa hoa don thang sau truoc.");
+            }
+        }
+        hoaDonCaNhanRepository.deleteAll(hoaDonCaNhanRepository.findByHoaDonPhongId(hd.getId()));
+        hoaDonRepository.delete(hd);
+        hoaDonRepository.flush();
+        if (cs != null) chiSoRepository.delete(cs);
     }
 }

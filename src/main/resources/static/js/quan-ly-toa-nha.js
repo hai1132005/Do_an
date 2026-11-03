@@ -166,11 +166,26 @@ async function renderQlChiSo(el) {
           <label>Phòng<select id="cs-phong">${phongs.map(p => `<option value="${p.id}">P.${p.soPhong}</option>`).join("")}</select></label>
           <label>Tháng<input type="number" id="cs-thang" min="1" max="12" value="${now.getMonth() + 1}" required></label>
           <label>Năm<input type="number" id="cs-nam" value="${now.getFullYear()}" required></label>
-          <label>Chỉ số điện mới (kWh)<input type="number" id="cs-dien" min="0" required></label>
-          <label>Chỉ số nước mới (m3)<input type="number" id="cs-nuoc" min="0" required></label>
+          <label>Chỉ số điện mới (kWh)<input type="number" id="cs-dien" min="0" step="any" required></label>
+          <label>Chỉ số nước mới (m3)<input type="number" id="cs-nuoc" min="0" step="any" required></label>
         </div>
+        <p class="panel-desc" id="cs-goi-y"></p>
         <button class="btn btn-primary" type="submit">Ghi chỉ số &amp; tạo hóa đơn</button>
       </form>`;
+
+    const capNhatGoiY = async () => {
+      const goiY = document.getElementById("cs-goi-y");
+      try {
+        const c = await api(`/api/quan-ly-toa-nha/chi-so-cu/${document.getElementById("cs-phong").value}`);
+        document.getElementById("cs-dien").min = c.dienCu;
+        document.getElementById("cs-nuoc").min = c.nuocCu;
+        goiY.innerHTML = `Nhập <strong>số hiện đang hiển thị trên đồng hồ</strong> (chỉ số tích lũy), không phải số tiêu thụ trong tháng. `
+          + `Chỉ số cũ${c.kyCuoi ? " (kỳ " + c.kyCuoi + ")" : ""}: điện <strong>${c.dienCu}</strong> kWh, nước <strong>${c.nuocCu}</strong> m³. `
+          + `Số tiêu thụ = chỉ số mới − chỉ số cũ.`;
+      } catch (err) { goiY.textContent = ""; }
+    };
+    document.getElementById("cs-phong").addEventListener("change", capNhatGoiY);
+    capNhatGoiY();
 
     document.getElementById("form-chi-so").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -183,6 +198,7 @@ async function renderQlChiSo(el) {
           chiSoNuocMoi: Number(document.getElementById("cs-nuoc").value),
         });
         toast("Đã ghi chỉ số và tạo hóa đơn.");
+        capNhatGoiY();
       } catch (err) { toast(err.message, true); }
     });
   };
@@ -313,12 +329,21 @@ async function renderQlHoaDon(el) {
             <button class="btn btn-outline" data-pdf="${h.id}" data-phong="${h.phong.soPhong}" data-ky="${h.thang}_${h.nam}">PDF</button>
             ${h.trangThai !== "DA_THANH_TOAN"
               ? `<button class="btn btn-primary" data-tt="${h.id}">Đã thu tiền</button>` : ""}
+            <button class="btn btn-outline" data-xoa="${h.id}" data-ky="${h.thang}/${h.nam}" data-phong="${h.phong.soPhong}">Xóa</button>
           </td>
         </tr>`).join("") + `</tbody></table>`;
 
     box.querySelectorAll("[data-pdf]").forEach(btn => btn.addEventListener("click",
       () => taiFile(`/api/quan-ly-toa-nha/hoa-don/${btn.dataset.pdf}/pdf`,
                     `hoa_don_P${btn.dataset.phong}_${btn.dataset.ky}.pdf`)));
+
+    box.querySelectorAll("[data-xoa]").forEach(btn => btn.addEventListener("click", async () => {
+      const daTra = (theoHoaDon[btn.dataset.xoa] || []).filter(c => c.trangThai === "DA_THANH_TOAN").length;
+      const canhBao = daTra ? `\nLưu ý: đã có ${daTra} sinh viên thanh toán, dữ liệu thanh toán đó cũng sẽ bị xóa.` : "";
+      if (!confirm(`Xóa hóa đơn P.${btn.dataset.phong} tháng ${btn.dataset.ky}?\nHóa đơn từng sinh viên và chỉ số điện nước của kỳ này cũng bị xóa để có thể ghi lại.${canhBao}`)) return;
+      try { await api(`/api/quan-ly-toa-nha/hoa-don/${btn.dataset.xoa}`, "DELETE"); toast("Đã xóa hóa đơn."); load(); }
+      catch (err) { toast(err.message, true); }
+    }));
 
     box.querySelectorAll("[data-tt]").forEach(btn => btn.addEventListener("click", async () => {
       const chuaTra = (theoHoaDon[btn.dataset.tt] || []).filter(c => c.trangThai !== "DA_THANH_TOAN");
@@ -368,4 +393,3 @@ async function renderQlViPham(el) {
   if (picker.hasPicker) document.getElementById("picker-toa-nha").addEventListener("change", load);
   load();
 }
-

@@ -82,6 +82,18 @@ public class QuanLyToaNhaController {
         return ResponseEntity.ok(chiSoService.ghiChiSo(req, nguoiGhi.getId()));
     }
 
+    @GetMapping("/chi-so-cu/{phongId}")
+    public ResponseEntity<?> chiSoCu(@PathVariable Long phongId) {
+        return ResponseEntity.ok(chiSoService.chiSoCuCuaPhong(phongId));
+    }
+
+    /** Xoa hoa don (kem hoa don ca nhan + chi so cua ky do) de test lai / sua sai. */
+    @DeleteMapping("/hoa-don/{hoaDonId}")
+    public ResponseEntity<?> xoaHoaDon(@PathVariable Long hoaDonId) {
+        chiSoService.xoaHoaDon(hoaDonId);
+        return ResponseEntity.ok(java.util.Map.of("message", "Da xoa hoa don"));
+    }
+
     @PostMapping("/xac-nhan-thanh-toan/{hoaDonId}")
     public ResponseEntity<?> xacNhanThanhToan(@PathVariable Long hoaDonId) {
         // Dong ca cac phan ca nhan chua tra (thu tien mat) de khong con cong no ao / tra trung
