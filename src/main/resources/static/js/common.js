@@ -143,7 +143,10 @@ function buildSidebar(groups) {
     });
   });
 
-  if (firstId) goToSection(firstId);
+  // Cho phep mo thang 1 muc qua #id tren URL (vd: sinh-vien.html#sv-hoa-don-ca-nhan sau khi thanh toan VNPay)
+  const tuUrl = decodeURIComponent((location.hash || "").slice(1));
+  const batDau = NAV_HIEN_TAI.some(i => i.id === tuUrl) ? tuUrl : firstId;
+  if (batDau) goToSection(batDau);
 }
 
 async function goToSection(id) {
@@ -200,4 +203,3 @@ function veTongQuan(tq) {
       ${statBox("Vi phạm tháng này", tq.soViPhamThangNay, tq.soViPhamThangNay > 0)}
     </div>`;
 }
-
