@@ -14,6 +14,7 @@ import com.ktx.ql_ktx.service.ChiSoService;
 import com.ktx.ql_ktx.service.CuDanService;
 import com.ktx.ql_ktx.service.DangKyService;
 import com.ktx.ql_ktx.service.ExportPdfService;
+import com.ktx.ql_ktx.service.HoaDonCaNhanService;
 import com.ktx.ql_ktx.service.HoaDonService;
 import com.ktx.ql_ktx.service.PhongService;
 import com.ktx.ql_ktx.service.TongQuanService;
@@ -40,6 +41,7 @@ public class QuanLyToaNhaController {
     @Autowired private PhongService phongService;
     @Autowired private ChiSoService chiSoService;
     @Autowired private HoaDonService hoaDonService;
+    @Autowired private HoaDonCaNhanService hoaDonCaNhanService;
     @Autowired private NguoiDungRepository nguoiDungRepository;
     @Autowired private CuDanService cuDanService;
     @Autowired private ViPhamService viPhamService;
@@ -82,6 +84,8 @@ public class QuanLyToaNhaController {
 
     @PostMapping("/xac-nhan-thanh-toan/{hoaDonId}")
     public ResponseEntity<?> xacNhanThanhToan(@PathVariable Long hoaDonId) {
+        // Dong ca cac phan ca nhan chua tra (thu tien mat) de khong con cong no ao / tra trung
+        hoaDonCaNhanService.thuTienMatCacPhanConLai(hoaDonId);
         return ResponseEntity.ok(hoaDonService.xacNhanThanhToan(hoaDonId));
     }
 
@@ -156,6 +160,12 @@ public class QuanLyToaNhaController {
                         "attachment; filename=hoa_don_" + hd.getPhong().getSoPhong() + "_" + hd.getThang() + "_" + hd.getNam() + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    /** Phan cua TUNG sinh vien (ai da tra / chua tra) trong cac hoa don cua 1 toa nha */
+    @GetMapping("/hoa-don-ca-nhan/toa-nha/{toaNhaId}")
+    public ResponseEntity<?> hoaDonCaNhanTheoToaNha(@PathVariable Long toaNhaId) {
+        return ResponseEntity.ok(hoaDonCaNhanService.theoToaNha(toaNhaId));
     }
 
     /** Danh sach toan bo hoa don cua 1 toa nha (de quan ly xem & tai PDF) */

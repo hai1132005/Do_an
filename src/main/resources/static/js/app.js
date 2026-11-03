@@ -468,9 +468,10 @@ async function renderSvHoaDonCaNhan(el) {
       </div>
       ${!list.length ? `<p class="empty-state">Chưa có hóa đơn cá nhân nào.</p>` : `
       <table class="data-table"><thead><tr>
-          <th>Số ngày ở</th><th>Tiền phòng</th><th>Tiền điện</th><th>Tiền nước</th><th>Tổng</th><th>Hạn TT</th><th>Trạng thái</th><th></th>
+          <th>Tháng</th><th>Số ngày ở</th><th>Tiền phòng</th><th>Tiền điện</th><th>Tiền nước</th><th>Tổng</th><th>Hạn TT</th><th>Trạng thái</th><th></th>
         </tr></thead><tbody>` +
         list.map(h => `<tr>
+            <td>${h.hoaDonPhong ? h.hoaDonPhong.thang + "/" + h.hoaDonPhong.nam : "—"}</td>
             <td class="num">${h.soNgayO}</td>
             <td class="num">${tienVND(h.tienPhong)}</td>
             <td class="num">${tienVND(h.tienDien)}</td>
@@ -762,13 +763,18 @@ async function renderQlHoaDon(el) {
   const load = async () => {
     const toaNhaId = picker.hasPicker ? document.getElementById("picker-toa-nha").value : picker.toaNhaId;
     if (!toaNhaId) return;
-    const list = await api(`/api/quan-ly-toa-nha/hoa-don/toa-nha/${toaNhaId}`);
+    const [list, caNhan] = await Promise.all([
+      api(`/api/quan-ly-toa-nha/hoa-don/toa-nha/${toaNhaId}`),
+      api(`/api/quan-ly-toa-nha/hoa-don-ca-nhan/toa-nha/${toaNhaId}`).catch(() => []),
+    ]);
+    const theoHoaDon = {};
+    caNhan.forEach(c => (theoHoaDon[c.hoaDonPhongId] ||= []).push(c));
     const box = document.getElementById("hoa-don-list");
     if (!list.length) { box.innerHTML = `<p class="empty-state">Chưa có hóa đơn nào. Hãy ghi chỉ số điện nước để tạo hóa đơn.</p>`; return; }
 
     list.sort((a, b) => (b.nam - a.nam) || (b.thang - a.thang));
     box.innerHTML = `<table class="data-table"><thead><tr>
-        <th>Phòng</th><th>Tháng</th><th>Tiền phòng</th><th>Điện</th><th>Nước</th><th>Tổng</th><th>Trạng thái</th><th></th>
+        <th>Phòng</th><th>Tháng</th><th>Tiền phòng</th><th>Điện</th><th>Nước</th><th>Tổng</th><th>Thanh toán theo sinh viên</th><th>Trạng thái</th><th></th>
       </tr></thead><tbody>` +
       list.map(h => `<tr>
           <td>P.${h.phong.soPhong}</td><td>${h.thang}/${h.nam}</td>
@@ -776,6 +782,9 @@ async function renderQlHoaDon(el) {
           <td class="num">${tienVND(h.tienDien)}</td>
           <td class="num">${tienVND(h.tienNuoc)}</td>
           <td class="num"><strong>${tienVND(h.tongTien)}</strong></td>
+          <td>${(theoHoaDon[h.id] || []).map(c => `<div>${c.hoTen}: ${tienVND(c.tongTien)} — ${c.trangThai === "DA_THANH_TOAN"
+              ? `<span class="tag tag-duyet">Đã thanh toán (${c.hinhThuc === "VNPay" ? "VNPay" : "tiền mặt"})</span>`
+              : `<span class="tag tag-cho">Chưa thanh toán</span>`}</div>`).join("") || "—"}</td>
           <td>${tagHoaDon(h.trangThai)}</td>
           <td style="display:flex; gap:6px;">
             <button class="btn btn-outline" data-pdf="${h.id}" data-phong="${h.phong.soPhong}" data-ky="${h.thang}_${h.nam}">PDF</button>
@@ -789,6 +798,8 @@ async function renderQlHoaDon(el) {
                     `hoa_don_P${btn.dataset.phong}_${btn.dataset.ky}.pdf`)));
 
     box.querySelectorAll("[data-tt]").forEach(btn => btn.addEventListener("click", async () => {
+      const chuaTra = (theoHoaDon[btn.dataset.tt] || []).filter(c => c.trangThai !== "DA_THANH_TOAN");
+      if (chuaTra.length && !confirm(`Còn ${chuaTra.length} sinh viên chưa thanh toán: ${chuaTra.map(c => c.hoTen).join(", ")}.\nBấm OK để ghi nhận đã thu tiền mặt phần của họ và đóng hóa đơn?`)) return;
       try { await api(`/api/quan-ly-toa-nha/xac-nhan-thanh-toan/${btn.dataset.tt}`, "POST"); toast("Đã xác nhận thanh toán."); load(); }
       catch (err) { toast(err.message, true); }
     }));

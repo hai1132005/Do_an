@@ -1,8 +1,8 @@
 package com.ktx.ql_ktx.service;
 
+import com.ktx.ql_ktx.dto.HoaDonCaNhanQuanLyResponse;
 import com.ktx.ql_ktx.entity.*;
 import com.ktx.ql_ktx.repository.HoaDonCaNhanRepository;
-import com.ktx.ql_ktx.repository.HoaDonRepository;
 import com.ktx.ql_ktx.repository.HopDongRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +38,6 @@ public class HoaDonCaNhanService {
     @Autowired private HopDongRepository hopDongRepository;
     @Autowired private HoaDonCaNhanRepository hoaDonCaNhanRepository;
     @Autowired private NotificationService notificationService;
-    @Autowired private HoaDonRepository hoaDonRepository;
 
     /**
      * Chia 1 hoa don phong (da tinh san tong tien phong/dien/nuoc cua
@@ -134,17 +133,37 @@ public class HoaDonCaNhanService {
         hd.setMaGiaoDichVnPay(maGiaoDichVnPay);
         hoaDonCaNhanRepository.save(hd);
 
-        // Khi MOI phan ca nhan cua 1 hoa don phong deu da thanh toan thi hoa don phong
-        // cung duoc danh dau da thanh toan, de cac man hinh/bao cao theo phong khop so lieu.
-        HoaDon hoaDonPhong = hd.getHoaDonPhong();
-        boolean tatCaDaTra = hoaDonCaNhanRepository.findByHoaDonPhongId(hoaDonPhong.getId()).stream()
-                .allMatch(x -> x.getTrangThai() == TrangThaiHoaDon.DA_THANH_TOAN);
-        if (tatCaDaTra) {
-            hoaDonPhong.setTrangThai(TrangThaiHoaDon.DA_THANH_TOAN);
-            hoaDonPhong.setNgayThanhToan(LocalDate.now());
-            hoaDonRepository.save(hoaDonPhong);
-        }
-
         notificationService.guiEmailThanhToanThanhCong(hd);
+    }
+
+    /**
+     * Cho man hinh Hoa don cua quan ly: phan cua TUNG sinh vien (ai da tra, ai chua)
+     * trong cac hoa don phong cua 1 toa nha.
+     */
+    public List<HoaDonCaNhanQuanLyResponse> theoToaNha(Long toaNhaId) {
+        return hoaDonCaNhanRepository.findByHoaDonPhongPhongToaNhaId(toaNhaId).stream()
+                .map(h -> new HoaDonCaNhanQuanLyResponse(
+                        h.getId(), h.getHoaDonPhong().getId(), h.getSinhVien().getId(),
+                        h.getSinhVien().getHoTen(), h.getSinhVien().getMssv(),
+                        h.getSoNgayO(), h.getTongTien(), h.getTrangThai(), h.getNgayThanhToan(),
+                        h.getTrangThai() != TrangThaiHoaDon.DA_THANH_TOAN ? null
+                                : (h.getMaGiaoDichVnPay() != null ? "VNPay" : "Tien mat")))
+                .toList();
+    }
+
+    /**
+     * Quan ly bam "Da thu tien" cho 1 hoa don phong: cac phan ca nhan CHUA tra duoc ghi
+     * nhan la da thu (tien mat), phan da tra qua VNPay giu nguyen. Tranh viec hoa don
+     * phong da dong ma sinh vien van con cong no va tra trung lan nua.
+     */
+    @Transactional
+    public void thuTienMatCacPhanConLai(Long hoaDonPhongId) {
+        for (HoaDonCaNhan h : hoaDonCaNhanRepository.findByHoaDonPhongId(hoaDonPhongId)) {
+            if (h.getTrangThai() != TrangThaiHoaDon.DA_THANH_TOAN) {
+                h.setTrangThai(TrangThaiHoaDon.DA_THANH_TOAN);
+                h.setNgayThanhToan(LocalDate.now());
+                hoaDonCaNhanRepository.save(h);
+            }
+        }
     }
 }
