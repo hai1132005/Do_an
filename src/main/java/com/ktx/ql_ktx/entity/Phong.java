@@ -1,7 +1,7 @@
 package com.ktx.ql_ktx.entity;
 
-import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,6 +10,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * SUA SO VOI BAN GOC: da bo 2 ham tien ich getSoGiuongDaO()/getSoChoTrong()
+ * tinh truc tiep qua Giuong.sinhVien (vi truong do khong con ton tai).
+ * Viec tinh so giuong trong/da o gio phai di qua GiuongService (dua vao
+ * hop dong con hieu luc), vi do la nghiep vu can Repository nen khong
+ * the dat lam ham @Transient ngay trong Entity duoc nua - xem
+ * PhongTinhTrangResponse / PhongService.
+ */
 @Entity
 @Table(name = "phong", uniqueConstraints = @UniqueConstraint(columnNames = {"toa_nha_id", "soPhong"}))
 @Getter
@@ -43,16 +51,4 @@ public class Phong {
     @JsonIgnore
     @OneToMany(mappedBy = "phong", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Giuong> danhSachGiuong = new ArrayList<>();
-
-    /** So giuong dang co sinh vien o (tinh dong, khong luu DB) */
-    @Transient
-    public int getSoGiuongDaO() {
-        if (danhSachGiuong == null) return 0;
-        return (int) danhSachGiuong.stream().filter(g -> g.getSinhVien() != null).count();
-    }
-
-    @Transient
-    public int getSoChoTrong() {
-        return soGiuongToiDa - getSoGiuongDaO();
-    }
 }

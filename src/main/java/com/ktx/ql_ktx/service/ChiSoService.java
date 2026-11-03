@@ -25,6 +25,7 @@ public class ChiSoService {
     @Autowired private BacGiaDienRepository bacGiaDienRepository;
     @Autowired private HoaDonRepository hoaDonRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
+    @Autowired private HoaDonCaNhanService hoaDonCaNhanService;
 
     // Gia nuoc co dinh: dong/m3 - co the doi thanh cau hinh trong DB neu can
     private static final BigDecimal GIA_NUOC_M3 = new BigDecimal("15000");
@@ -122,6 +123,14 @@ public class ChiSoService {
         hd.setHanThanhToan(LocalDate.of(cs.getNam(), cs.getThang(), 1).plusMonths(1).plusDays(9)); // han ngay 10 thang sau
         hd.setTrangThai(TrangThaiHoaDon.CHUA_THANH_TOAN);
 
-        return hoaDonRepository.save(hd);
+        hd = hoaDonRepository.save(hd);
+
+        // BO SUNG MOI (diem 3 nhan xet cua GVHD): ngay sau khi hoa don cua
+        // CA PHONG duoc tao, chia no thanh cac hoa don CA NHAN theo dung
+        // so ngay tung sinh vien thuc su da o trong thang - xem
+        // HoaDonCaNhanService.chiaHoaDonTheoSinhVien().
+        hoaDonCaNhanService.chiaHoaDonTheoSinhVien(hd, cs.getThang(), cs.getNam());
+
+        return hd;
     }
 }

@@ -40,6 +40,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Gui email thong bao (diem 4 nhan xet cua GVHD) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Security (phan quyen) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

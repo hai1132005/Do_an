@@ -13,16 +13,24 @@ import java.util.List;
 
 /**
  * Nghiep vu: Sinh vien dang ky phong -> Quan ly toa nha xet duyet -> Tu dong xep giuong + tao hop dong.
+ *
+ * SUA SO VOI BAN GOC: khi duyet don, KHONG con goi giuong.setSinhVien(...)
+ * nua (truong do da bo) - thay vao do chi can tao 1 ban ghi HopDong moi,
+ * con viec "giuong da co nguoi" duoc GiuongService tu suy ra tu chinh hop
+ * dong nay. Dieu kien chan dang ky trung cung khong con la "sinh vien
+ * chua tung co giuong nao" ma la "sinh vien hien KHONG co hop dong nao
+ * dang hieu luc" (vi 1 sinh vien co the da tung o va tra phong truoc do).
  */
 @Service
 public class DangKyService {
 
     @Autowired private DangKyPhongRepository dangKyRepository;
     @Autowired private PhongRepository phongRepository;
-    @Autowired private GiuongRepository giuongRepository;
+    @Autowired private GiuongService giuongService;
     @Autowired private HopDongRepository hopDongRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
     @Autowired private PhongService phongService;
+    @Autowired private NotificationService notificationService;
 
     /** B1: Sinh vien dang ky nguyen vong o mot phong con trong */
     @Transactional
@@ -32,13 +40,15 @@ public class DangKyService {
         Phong phong = phongRepository.findById(phongId)
                 .orElseThrow(() -> new IllegalArgumentException("Khong tim thay phong"));
 
-        if (giuongRepository.findBySinhVienId(sinhVienId).isPresent()) {
-            throw new IllegalStateException("Sinh vien da co giuong, khong the dang ky them");
+        boolean dangCoCho = hopDongRepository.findBySinhVienId(sinhVienId).stream()
+                .anyMatch(HopDong::isConHieuLuc);
+        if (dangCoCho) {
+            throw new IllegalStateException("Sinh vien dang co cho o, khong the dang ky them");
         }
         if (phong.getTrangThai() == TrangThaiPhong.KHOA) {
             throw new IllegalStateException("Phong dang tam khoa, khong nhan dang ky");
         }
-        if (phong.getSoChoTrong() <= 0) {
+        if (giuongService.soGiuongConTrong(phong.getId()) <= 0) {
             throw new IllegalStateException("Phong da het cho trong");
         }
 
@@ -73,13 +83,11 @@ public class DangKyService {
 
         if (req.isDongY()) {
             Phong phong = dk.getPhong();
-            List<Giuong> giuongTrong = giuongRepository.findByPhongIdAndSinhVienIsNull(phong.getId());
+            List<Giuong> giuongTrong = giuongService.giuongConTrong(phong.getId());
             if (giuongTrong.isEmpty()) {
                 throw new IllegalStateException("Phong da het giuong trong, khong the duyet");
             }
             Giuong giuong = giuongTrong.get(0);
-            giuong.setSinhVien(dk.getSinhVien());
-            giuongRepository.save(giuong);
 
             HopDong hd = new HopDong();
             hd.setSinhVien(dk.getSinhVien());
@@ -90,6 +98,8 @@ public class DangKyService {
 
             phongService.capNhatTrangThaiPhong(phong);
             dk.setTrangThai(TrangThaiDangKy.DA_DUYET);
+
+            notificationService.guiEmailDuyetDangKy(dk.getSinhVien(), phong, giuong);
         } else {
             dk.setTrangThai(TrangThaiDangKy.TU_CHOI);
         }

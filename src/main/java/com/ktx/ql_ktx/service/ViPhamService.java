@@ -1,9 +1,10 @@
 package com.ktx.ql_ktx.service;
 
 import com.ktx.ql_ktx.dto.TaoViPhamRequest;
+import com.ktx.ql_ktx.entity.HopDong;
 import com.ktx.ql_ktx.entity.NguoiDung;
 import com.ktx.ql_ktx.entity.ViPham;
-import com.ktx.ql_ktx.repository.GiuongRepository;
+import com.ktx.ql_ktx.repository.HopDongRepository;
 import com.ktx.ql_ktx.repository.NguoiDungRepository;
 import com.ktx.ql_ktx.repository.ViPhamRepository;
 import jakarta.transaction.Transactional;
@@ -22,7 +23,7 @@ public class ViPhamService {
 
     @Autowired private ViPhamRepository viPhamRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
-    @Autowired private GiuongRepository giuongRepository;
+    @Autowired private HopDongRepository hopDongRepository;
 
     /** Quan ly toa nha lap bien ban vi pham cho 1 sinh vien */
     @Transactional
@@ -47,8 +48,8 @@ public class ViPhamService {
 
     /** Danh sach vi pham cua toan bo sinh vien dang o trong 1 toa nha */
     public List<ViPham> viPhamTheoToaNha(Long toaNhaId) {
-        List<Long> svIds = giuongRepository.findByPhongToaNhaIdAndSinhVienIsNotNull(toaNhaId)
-                .stream().map(g -> g.getSinhVien().getId()).toList();
+        List<Long> svIds = hopDongRepository.findByGiuongPhongToaNhaIdAndConHieuLucTrue(toaNhaId)
+                .stream().map(HopDong::getSinhVien).map(NguoiDung::getId).toList();
         if (svIds.isEmpty()) return List.of();
         return viPhamRepository.findBySinhVienIdIn(svIds);
     }

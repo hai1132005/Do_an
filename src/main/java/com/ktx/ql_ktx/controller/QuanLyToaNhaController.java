@@ -1,5 +1,6 @@
 package com.ktx.ql_ktx.controller;
 
+import com.ktx.ql_ktx.dto.ChuyenPhongRequest;
 import com.ktx.ql_ktx.dto.GhiChiSoRequest;
 import com.ktx.ql_ktx.dto.TaoPhongRequest;
 import com.ktx.ql_ktx.dto.TaoViPhamRequest;
@@ -114,6 +115,15 @@ public class QuanLyToaNhaController {
     public ResponseEntity<?> traPhong(@PathVariable Long hopDongId) {
         cuDanService.traPhong(hopDongId);
         return ResponseEntity.ok().body("{\"thongBao\":\"Da tra phong thanh cong\"}");
+    }
+
+    /**
+     * Chuyen phong/giuong cho 1 sinh vien dang o - nghiep vu MOI (diem 3
+     * nhan xet cua GVHD), khong lam mat lich su hop dong cu.
+     */
+    @PostMapping("/chuyen-phong/{sinhVienId}")
+    public ResponseEntity<?> chuyenPhong(@PathVariable Long sinhVienId, @RequestBody ChuyenPhongRequest req) {
+        return ResponseEntity.ok(cuDanService.chuyenPhong(sinhVienId, req.getGiuongMoiId()));
     }
 
     // ===================== VI PHAM NOI QUY =====================

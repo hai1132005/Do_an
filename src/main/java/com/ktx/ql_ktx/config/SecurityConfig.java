@@ -59,6 +59,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                // VNPay sandbox redirect trinh duyet sinh vien ve day SAU KHI thanh toan,
+                // khong kem JWT - an toan dua vao chu ky HMAC-SHA512 (VnPayService.xacThucChuKy),
+                // khong phai vao JWT - xem PaymentController.
+                .requestMatchers("/api/thanh-toan/**").permitAll()
                 .requestMatchers("/api/ban-quan-ly/**").hasRole("BAN_QUAN_LY")
                 .requestMatchers("/api/quan-ly-toa-nha/**").hasAnyRole("QUAN_LY_TOA_NHA", "BAN_QUAN_LY")
                 .requestMatchers("/api/sinh-vien/**").hasAnyRole("SINH_VIEN", "QUAN_LY_TOA_NHA", "BAN_QUAN_LY")

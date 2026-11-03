@@ -20,6 +20,7 @@ public class ThongKeService {
     @Autowired private ToaNhaRepository toaNhaRepository;
     @Autowired private PhongRepository phongRepository;
     @Autowired private HoaDonRepository hoaDonRepository;
+    @Autowired private GiuongService giuongService;
 
     /** Thong ke ty le lap day, doanh thu thang hien tai, tong cong no cho 1 toa nha */
     public ThongKeToaNhaResponse thongKeToaNha(Long toaNhaId) {
@@ -28,7 +29,7 @@ public class ThongKeService {
 
         List<Phong> danhSachPhong = phongRepository.findByToaNhaId(toaNhaId);
         int tongSoGiuong = danhSachPhong.stream().mapToInt(Phong::getSoGiuongToiDa).sum();
-        int soGiuongDaO = danhSachPhong.stream().mapToInt(Phong::getSoGiuongDaO).sum();
+        int soGiuongDaO = danhSachPhong.stream().mapToInt(p -> giuongService.soGiuongDaO(p.getId())).sum();
         double tyLeLapDay = tongSoGiuong == 0 ? 0 : (soGiuongDaO * 100.0 / tongSoGiuong);
 
         List<Long> phongIds = danhSachPhong.stream().map(Phong::getId).toList();

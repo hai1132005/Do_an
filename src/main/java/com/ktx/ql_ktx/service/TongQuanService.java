@@ -23,6 +23,7 @@ public class TongQuanService {
     @Autowired private HoaDonRepository hoaDonRepository;
     @Autowired private DangKyPhongRepository dangKyRepository;
     @Autowired private ViPhamService viPhamService;
+    @Autowired private GiuongService giuongService;
 
     public TongQuanResponse tongQuan(Long toaNhaId) {
         List<ToaNha> toaNhas = (toaNhaId == null)
@@ -34,7 +35,7 @@ public class TongQuanService {
                 .toList();
 
         int tongSoGiuong = phongs.stream().mapToInt(Phong::getSoGiuongToiDa).sum();
-        int soGiuongDaO = phongs.stream().mapToInt(Phong::getSoGiuongDaO).sum();
+        int soGiuongDaO = phongs.stream().mapToInt(p -> giuongService.soGiuongDaO(p.getId())).sum();
         double tyLe = tongSoGiuong == 0 ? 0 : (soGiuongDaO * 100.0 / tongSoGiuong);
 
         int soDonChoDuyet = toaNhas.stream()

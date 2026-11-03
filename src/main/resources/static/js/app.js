@@ -147,6 +147,7 @@ const NAV = {
     { id: "sv-dang-ky", label: "Đơn đăng ký", title: "Đơn đăng ký của tôi", render: renderSvDangKy },
     { id: "sv-hop-dong", label: "Hợp đồng", title: "Hợp đồng của tôi", render: renderSvHopDong },
     { id: "sv-hoa-don", label: "Hóa đơn", title: "Hóa đơn phòng tôi", render: renderSvHoaDon },
+    { id: "sv-hoa-don-ca-nhan", label: "Hóa đơn & Công nợ cá nhân", title: "Hóa đơn cá nhân của tôi", render: renderSvHoaDonCaNhan },
     { id: "sv-vi-pham", label: "Vi phạm nội quy", title: "Vi phạm nội quy của tôi", render: renderSvViPham },
   ],
   QUAN_LY_TOA_NHA: [
@@ -293,7 +294,9 @@ async function renderSvTongQuan(el) {
 
   let hoaDonHtml = "";
   if (hdHienTai) {
-    const hoaDons = await api("/api/sinh-vien/hoa-don").catch(() => []);
+    // Dung hoa don CA NHAN (phan tien rieng cua sinh vien nay), khong phai hoa don chung ca phong,
+    // de so lieu giam dung khi sinh vien thanh toan qua VNPay.
+    const hoaDons = await api("/api/sinh-vien/hoa-don-ca-nhan").catch(() => []);
     const chuaTT = hoaDons.filter(h => h.trangThai !== "DA_THANH_TOAN");
     const tongNo = chuaTT.reduce((s, h) => s + Number(h.tongTien), 0);
     hoaDonHtml = `<div class="stat-grid">
@@ -427,7 +430,7 @@ async function renderSvHopDong(el) {
 async function renderSvHoaDon(el) {
   const list = await api("/api/sinh-vien/hoa-don");
   if (!list.length) { el.innerHTML = `<p class="empty-state">Chưa có hóa đơn nào.</p>`; return; }
-  el.innerHTML = `<div class="panel"><table class="data-table"><thead><tr>
+  el.innerHTML = `<div class="panel"><p class="panel-desc">Đây là hóa đơn CHUNG của cả phòng. Phần tiền riêng của bạn (theo số ngày ở) và việc thanh toán nằm ở mục <strong>Hóa đơn &amp; Công nợ cá nhân</strong>; hóa đơn chung chỉ chuyển "Đã thanh toán" khi mọi người trong phòng đã trả đủ phần của mình.</p><table class="data-table"><thead><tr>
       <th>Tháng</th><th>Tiền phòng</th><th>Tiền điện</th><th>Tiền nước</th><th>Tổng</th><th>Hạn TT</th><th>Trạng thái</th><th></th>
     </tr></thead><tbody>` +
     list.map(h => `<tr>
@@ -443,6 +446,50 @@ async function renderSvHoaDon(el) {
 
   el.querySelectorAll("[data-pdf]").forEach(btn => btn.addEventListener("click",
     () => taiFile(`/api/sinh-vien/hoa-don/${btn.dataset.pdf}/pdf`, `hoa_don_${btn.dataset.pdf}.pdf`)));
+}
+
+/**
+ * BO SUNG MOI (diem 3 nhan xet GVHD): hoa don CA NHAN cua rieng sinh vien
+ * (chia theo so ngay thuc te da o, khac voi "Hóa đơn" chung ca phong o
+ * tab truoc), kem tong cong no va nut thanh toan qua VNPay sandbox.
+ */
+async function renderSvHoaDonCaNhan(el) {
+  const [list, congNo] = await Promise.all([
+    api("/api/sinh-vien/hoa-don-ca-nhan"),
+    api("/api/sinh-vien/cong-no"),
+  ]);
+
+  el.innerHTML = `<div class="panel">
+      <h2>Hóa đơn &amp; công nợ cá nhân</h2>
+      <p class="panel-desc">Phần tiền phòng/điện/nước được chia riêng theo đúng số ngày bạn thực sự ở trong tháng (không chia đều theo đầu người).</p>
+      <div class="stat-box" style="max-width:280px;margin-bottom:16px">
+        <div class="stat-label">Tổng công nợ chưa thanh toán</div>
+        <div class="stat-value">${tienVND(congNo.tongCongNo)}</div>
+      </div>
+      ${!list.length ? `<p class="empty-state">Chưa có hóa đơn cá nhân nào.</p>` : `
+      <table class="data-table"><thead><tr>
+          <th>Số ngày ở</th><th>Tiền phòng</th><th>Tiền điện</th><th>Tiền nước</th><th>Tổng</th><th>Hạn TT</th><th>Trạng thái</th><th></th>
+        </tr></thead><tbody>` +
+        list.map(h => `<tr>
+            <td class="num">${h.soNgayO}</td>
+            <td class="num">${tienVND(h.tienPhong)}</td>
+            <td class="num">${tienVND(h.tienDien)}</td>
+            <td class="num">${tienVND(h.tienNuoc)}</td>
+            <td class="num"><strong>${tienVND(h.tongTien)}</strong></td>
+            <td>${h.hanThanhToan}</td>
+            <td>${tagHoaDon(h.trangThai)}</td>
+            <td>${h.trangThai === "DA_THANH_TOAN"
+                ? "—"
+                : `<button class="btn btn-primary" data-pay="${h.id}">Thanh toán VNPay</button>`}</td>
+          </tr>`).join("") + `</tbody></table>`}
+    </div>`;
+
+  el.querySelectorAll("[data-pay]").forEach(btn => btn.addEventListener("click", async () => {
+    try {
+      const res = await api(`/api/sinh-vien/hoa-don-ca-nhan/${btn.dataset.pay}/vnpay-url`);
+      window.location.href = res.url;
+    } catch (err) { toast(err.message, true); }
+  }));
 }
 
 async function renderSvViPham(el) {
@@ -663,6 +710,7 @@ async function renderQlCuDan(el) {
           <td class="num">${s.soLanViPham > 0 ? `<span class="tag tag-quahan">${s.soLanViPham} lần</span>` : "0"}</td>
           <td style="display:flex; gap:6px;">
             <button class="btn btn-outline" data-vipham="${s.sinhVienId}" data-ten="${s.hoTen}">Lập vi phạm</button>
+            <button class="btn btn-outline" data-chuyenphong="${s.sinhVienId}" data-ten="${s.hoTen}">Chuyển phòng</button>
             <button class="btn btn-outline" data-traphong="${s.hopDongId}" data-ten="${s.hoTen}">Trả phòng</button>
           </td>
         </tr>`).join("") + `</tbody></table>`;
@@ -675,6 +723,17 @@ async function renderQlCuDan(el) {
         await api("/api/quan-ly-toa-nha/vi-pham", "POST",
           { sinhVienId: Number(btn.dataset.vipham), noiDung, hinhThucXuLy });
         toast("Đã lập biên bản vi phạm.");
+        load();
+      } catch (err) { toast(err.message, true); }
+    }));
+
+    box.querySelectorAll("[data-chuyenphong]").forEach(btn => btn.addEventListener("click", async () => {
+      const giuongMoiId = prompt(`Nhập ID giường đích để chuyển ${btn.dataset.ten} sang (xem ở Sơ đồ phòng):`);
+      if (!giuongMoiId) return;
+      try {
+        await api(`/api/quan-ly-toa-nha/chuyen-phong/${btn.dataset.chuyenphong}`, "POST",
+          { giuongMoiId: Number(giuongMoiId) });
+        toast("Đã chuyển phòng thành công. Hợp đồng cũ được giữ lại làm lịch sử.");
         load();
       } catch (err) { toast(err.message, true); }
     }));

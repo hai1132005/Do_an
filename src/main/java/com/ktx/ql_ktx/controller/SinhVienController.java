@@ -1,6 +1,7 @@
 package com.ktx.ql_ktx.controller;
 
 import com.ktx.ql_ktx.entity.HoaDon;
+import com.ktx.ql_ktx.entity.HoaDonCaNhan;
 import com.ktx.ql_ktx.entity.NguoiDung;
 import com.ktx.ql_ktx.entity.ToaNha;
 import com.ktx.ql_ktx.repository.HopDongRepository;
@@ -8,9 +9,12 @@ import com.ktx.ql_ktx.repository.NguoiDungRepository;
 import com.ktx.ql_ktx.security.NguoiDungPrincipal;
 import com.ktx.ql_ktx.service.DangKyService;
 import com.ktx.ql_ktx.service.ExportPdfService;
+import com.ktx.ql_ktx.service.HoaDonCaNhanService;
 import com.ktx.ql_ktx.service.HoaDonService;
 import com.ktx.ql_ktx.service.PhongService;
+import com.ktx.ql_ktx.service.VnPayService;
 import com.ktx.ql_ktx.service.ViPhamService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,7 +22,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * API danh cho SINH_VIEN: xem so do phong trong, dang ky phong, xem lich su dang ky,
@@ -35,6 +41,8 @@ public class SinhVienController {
     @Autowired private HopDongRepository hopDongRepository;
     @Autowired private ViPhamService viPhamService;
     @Autowired private ExportPdfService exportPdfService;
+    @Autowired private HoaDonCaNhanService hoaDonCaNhanService;
+    @Autowired private VnPayService vnPayService;
 
     private NguoiDung nguoiDungHienTai(Authentication auth) {
         String tenDangNhap = ((NguoiDungPrincipal) auth.getPrincipal()).getUsername();
@@ -80,7 +88,48 @@ public class SinhVienController {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Ban chua co phong o"));
         Long phongId = hopDong.getGiuong().getPhong().getId();
+
+        // Giu NGUYEN hanh vi cu: hien moi hoa don chung cua phong. Phan tien rieng theo so ngay o
+        // (chi cua nhung thang sinh vien thuc su o) nam o /hoa-don-ca-nhan.
         return ResponseEntity.ok(hoaDonService.hoaDonTheoPhong(phongId));
+    }
+
+    /**
+     * BO SUNG MOI (diem 3 nhan xet GVHD): hoa don CA NHAN cua chinh sinh
+     * vien dang dang nhap - moi nguoi chi thay dung phan tien cua minh
+     * trong phong, khong phai hoa don chung ca phong.
+     */
+    @GetMapping("/hoa-don-ca-nhan")
+    public ResponseEntity<?> hoaDonCaNhanCuaToi(Authentication auth) {
+        NguoiDung sv = nguoiDungHienTai(auth);
+        return ResponseEntity.ok(hoaDonCaNhanService.hoaDonCuaSinhVien(sv.getId()));
+    }
+
+    /** BO SUNG MOI: tong cong no (cac hoa don ca nhan chua thanh toan) cua chinh minh */
+    @GetMapping("/cong-no")
+    public ResponseEntity<?> congNoCuaToi(Authentication auth) {
+        NguoiDung sv = nguoiDungHienTai(auth);
+        BigDecimal tongNo = hoaDonCaNhanService.tongCongNoCuaSinhVien(sv.getId());
+        return ResponseEntity.ok(Map.of("tongCongNo", tongNo));
+    }
+
+    /**
+     * BO SUNG MOI (diem 3/4 nhan xet GVHD): sinh ra URL thanh toan VNPay
+     * SANDBOX cho 1 hoa don ca nhan cua chinh minh. Frontend chuyen
+     * huong trinh duyet (window.location) sang URL nay de sinh vien
+     * thanh toan; VNPay se redirect nguoc ve PaymentController sau khi
+     * xong (endpoint cong khai, xac thuc bang chu ky HMAC-SHA512).
+     */
+    @GetMapping("/hoa-don-ca-nhan/{hoaDonCaNhanId}/vnpay-url")
+    public ResponseEntity<?> taoUrlThanhToan(@PathVariable Long hoaDonCaNhanId, Authentication auth,
+                                              HttpServletRequest request) {
+        NguoiDung sv = nguoiDungHienTai(auth);
+        HoaDonCaNhan hd = hoaDonCaNhanService.timHoaDonCaNhan(hoaDonCaNhanId);
+        if (!hd.getSinhVien().getId().equals(sv.getId())) {
+            throw new IllegalStateException("Ban khong co quyen thanh toan hoa don nay");
+        }
+        String url = vnPayService.taoUrlThanhToan(hd.getId(), hd.getTongTien(), request.getRemoteAddr());
+        return ResponseEntity.ok(Map.of("url", url));
     }
 
     /** Sinh vien xem cac bien ban vi pham noi quy cua chinh minh */
