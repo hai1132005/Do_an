@@ -4,11 +4,16 @@ import com.ktx.ql_ktx.entity.Giuong;
 import com.ktx.ql_ktx.entity.HoaDonCaNhan;
 import com.ktx.ql_ktx.entity.NguoiDung;
 import com.ktx.ql_ktx.entity.Phong;
+import jakarta.mail.internet.MimeMessage;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
@@ -39,30 +44,42 @@ public class NotificationService {
 
     public void guiEmailDuyetDangKy(NguoiDung sinhVien, Phong phong, Giuong giuong) {
         String noiDung = String.format(
-                "Chao %s,%n%nDang ky o cua ban da duoc duyet.%nPhong: %s%nGiuong: %s%n%nTran trong, Ban quan ly KTX.",
+                "Chào %s,%n%nĐăng ký ở của bạn đã được duyệt.%nPhòng: %s%nGiường: %s%n%nTrân trọng,%nBan quản lý KTX.",
                 tenHienThi(sinhVien), phong.getSoPhong(), giuong.getKyHieu());
-        gui(sinhVien, "[KTX] Dang ky phong da duoc duyet", noiDung);
+        gui(sinhVien, "[KTX] Đăng ký phòng đã được duyệt", noiDung);
     }
 
     public void guiEmailHoaDonMoi(HoaDonCaNhan hd) {
         NguoiDung sv = hd.getSinhVien();
         String noiDung = String.format(
-                "Chao %s,%n%nBan co hoa don moi:%n- So ngay o: %d%n- Tien phong: %s%n- Tien dien: %s%n- Tien nuoc: %s%n- Tong tien: %s%n- Han thanh toan: %s%n%nVui long dang nhap he thong de thanh toan qua VNPay.%n%nTran trong, Ban quan ly KTX.",
-                tenHienThi(sv), hd.getSoNgayO(), hd.getTienPhong(), hd.getTienDien(),
-                hd.getTienNuoc(), hd.getTongTien(), hd.getHanThanhToan());
-        gui(sv, "[KTX] Hoa don moi can thanh toan", noiDung);
+                "Chào %s,%n%nBạn có hóa đơn mới:%n- Số ngày ở: %d%n- Tiền phòng: %s%n- Tiền điện: %s%n- Tiền nước: %s%n- Tổng tiền: %s%n- Hạn thanh toán: %s%n%nVui lòng đăng nhập hệ thống để thanh toán qua VNPay.%n%nTrân trọng,%nBan quản lý KTX.",
+                tenHienThi(sv), hd.getSoNgayO(), tien(hd.getTienPhong()), tien(hd.getTienDien()),
+                tien(hd.getTienNuoc()), tien(hd.getTongTien()), ngay(hd.getHanThanhToan()));
+        gui(sv, "[KTX] Hóa đơn mới cần thanh toán", noiDung);
     }
 
     public void guiEmailThanhToanThanhCong(HoaDonCaNhan hd) {
         NguoiDung sv = hd.getSinhVien();
+        String hinhThuc = hd.getMaGiaoDichVnPay() != null && !hd.getMaGiaoDichVnPay().isBlank()
+                ? "qua VNPay (mã giao dịch: " + hd.getMaGiaoDichVnPay() + ")"
+                : "bằng tiền mặt";
         String noiDung = String.format(
-                "Chao %s,%n%nHe thong da ghi nhan thanh toan thanh cong hoa don #%d, so tien %s qua VNPay (ma giao dich: %s).%n%nTran trong, Ban quan ly KTX.",
-                tenHienThi(sv), hd.getId(), hd.getTongTien(), hd.getMaGiaoDichVnPay());
-        gui(sv, "[KTX] Thanh toan thanh cong", noiDung);
+                "Chào %s,%n%nHệ thống đã ghi nhận thanh toán thành công hóa đơn #%d, số tiền %s, %s.%n%nTrân trọng,%nBan quản lý KTX.",
+                tenHienThi(sv), hd.getId(), tien(hd.getTongTien()), hinhThuc);
+        gui(sv, "[KTX] Thanh toán thành công", noiDung);
     }
 
     private String tenHienThi(NguoiDung nd) {
         return nd.getHoTen() != null ? nd.getHoTen() : nd.getTenDangNhap();
+    }
+
+    private String tien(BigDecimal v) {
+        if (v == null) return "0 đ";
+        return String.format(Locale.ROOT, "%,.0f", v).replace(',', '.') + " đ";
+    }
+
+    private String ngay(LocalDate d) {
+        return d == null ? "—" : d.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     private void gui(NguoiDung nguoiNhan, String tieuDe, String noiDung) {
@@ -75,12 +92,13 @@ public class NotificationService {
             return;
         }
         try {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setFrom(tuDiaChi);
-            msg.setTo(nguoiNhan.getEmail());
-            msg.setSubject(tieuDe);
-            msg.setText(noiDung);
-            mailSender.send(msg);
+            MimeMessage mime = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mime, false, "UTF-8");
+            helper.setFrom(tuDiaChi);
+            helper.setTo(nguoiNhan.getEmail());
+            helper.setSubject(tieuDe);
+            helper.setText(noiDung, false);
+            mailSender.send(mime);
         } catch (Exception e) {
             log.warn("Gui email that bai toi {}: {}", nguoiNhan.getEmail(), e.getMessage());
         }
