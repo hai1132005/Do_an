@@ -54,7 +54,8 @@ public class CuDanService {
             ketQua.add(new SinhVienDangOResponse(
                     sv.getId(), sv.getHoTen(), sv.getMssv(), sv.getEmail(), sv.getSoDienThoai(),
                     g.getPhong().getToaNha().getTenToaNha(), g.getPhong().getSoPhong(),
-                    g.getKyHieu(), hd.getId(), soViPham));
+                    g.getKyHieu(), hd.getId(), soViPham,
+                    hd.getNgayBatDau(), hd.getNgayKetThuc()));
         }
         return ketQua;
     }

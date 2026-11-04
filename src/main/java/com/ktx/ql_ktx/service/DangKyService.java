@@ -45,6 +45,12 @@ public class DangKyService {
         if (dangCoCho) {
             throw new IllegalStateException("Sinh vien dang co cho o, khong the dang ky them");
         }
+        boolean daNopDon = dangKyRepository.findBySinhVienId(sinhVienId).stream()
+                .anyMatch(d -> d.getTrangThai() == TrangThaiDangKy.CHO_DUYET
+                        && d.getPhong().getId().equals(phong.getId()));
+        if (daNopDon) {
+            throw new IllegalStateException("Ban da nop don dang ky phong nay va dang cho duyet");
+        }
         if (phong.getTrangThai() == TrangThaiPhong.KHOA) {
             throw new IllegalStateException("Phong dang tam khoa, khong nhan dang ky");
         }
@@ -67,7 +73,9 @@ public class DangKyService {
     /** B2: Quan ly toa nha xet duyet - neu dong y se tu dong xep giuong trong dau tien va tao hop dong */
     @Transactional
     public DangKyPhong xetDuyet(Long dangKyId, Long nguoiDuyetId, XetDuyetRequest req) {
-        DangKyPhong dk = dangKyRepository.findById(dangKyId)
+        // Khoa dong don: neu bam "Duyet" 2 lan lien tiep, yeu cau thu 2 phai cho
+        // yeu cau thu 1 xong roi thay don da DA_DUYET -> bi tu choi, khong tao hop dong thu 2.
+        DangKyPhong dk = dangKyRepository.findByIdForUpdate(dangKyId)
                 .orElseThrow(() -> new IllegalArgumentException("Khong tim thay don dang ky"));
 
         if (dk.getTrangThai() != TrangThaiDangKy.CHO_DUYET) {
@@ -82,6 +90,11 @@ public class DangKyService {
         dk.setGhiChu(req.getGhiChu());
 
         if (req.isDongY()) {
+            boolean daCoCho = hopDongRepository.findBySinhVienId(dk.getSinhVien().getId()).stream()
+                    .anyMatch(HopDong::isConHieuLuc);
+            if (daCoCho) {
+                throw new IllegalStateException("Sinh vien nay dang co hop dong con hieu luc, khong the duyet them");
+            }
             Phong phong = dk.getPhong();
             List<Giuong> giuongTrong = giuongService.giuongConTrong(phong.getId());
             if (giuongTrong.isEmpty()) {
@@ -92,7 +105,11 @@ public class DangKyService {
             HopDong hd = new HopDong();
             hd.setSinhVien(dk.getSinhVien());
             hd.setGiuong(giuong);
-            hd.setNgayBatDau(LocalDate.now());
+            LocalDate ngayVaoO = req.getNgayVaoO() != null ? req.getNgayVaoO() : LocalDate.now();
+            if (ngayVaoO.isAfter(LocalDate.now().plusYears(1))) {
+                throw new IllegalArgumentException("Ngay vao o khong hop le (qua xa trong tuong lai)");
+            }
+            hd.setNgayBatDau(ngayVaoO);
             hd.setConHieuLuc(true);
             hopDongRepository.save(hd);
 

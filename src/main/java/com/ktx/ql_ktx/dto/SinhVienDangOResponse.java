@@ -19,4 +19,6 @@ public class SinhVienDangOResponse {
     private String kyHieuGiuong;
     private Long hopDongId;
     private int soLanViPham;
+    private java.time.LocalDate ngayBatDau;   // ngay bat dau o (ngay duyet / chuyen phong)
+    private java.time.LocalDate ngayKetThuc;  // du kien ket thuc hop dong (co the null)
 }

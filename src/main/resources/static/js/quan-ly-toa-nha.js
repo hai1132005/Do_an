@@ -53,7 +53,7 @@ async function currentToaNhaPicker(container) {
 
 async function renderQlChoDuyet(el) {
   const picker = await currentToaNhaPicker(el);
-  el.innerHTML = `<div class="panel"><h2>Đơn chờ duyệt</h2><p class="panel-desc">Duyệt sẽ tự động xếp giường trống đầu tiên và tạo hợp đồng.</p>${picker.html}<div id="cho-duyet-list"></div></div>`;
+  el.innerHTML = `<div class="panel"><h2>Đơn chờ duyệt</h2><p class="panel-desc">Duyệt sẽ tự động xếp giường trống đầu tiên và tạo hợp đồng. Chọn <strong>ngày vào ở</strong> thực tế của sinh viên (mặc định hôm nay) — ngày này dùng để chia hóa đơn theo số ngày ở.</p>${picker.html}<div id="cho-duyet-list"></div></div>`;
 
   const load = async () => {
     const toaNhaId = picker.hasPicker ? document.getElementById("picker-toa-nha").value : picker.toaNhaId;
@@ -62,12 +62,13 @@ async function renderQlChoDuyet(el) {
     const box = document.getElementById("cho-duyet-list");
     if (!list.length) { box.innerHTML = `<p class="empty-state">Không có đơn nào đang chờ duyệt.</p>`; return; }
     box.innerHTML = `<table class="data-table"><thead><tr>
-        <th>Sinh viên</th><th>MSSV</th><th>Phòng</th><th>Ngày đăng ký</th><th></th>
+        <th>Sinh viên</th><th>MSSV</th><th>Phòng</th><th>Ngày đăng ký</th><th>Ngày vào ở</th><th></th>
       </tr></thead><tbody>` +
       list.map(d => `<tr>
           <td>${d.sinhVien.hoTen}</td><td class="num">${d.sinhVien.mssv}</td>
           <td>P.${d.phong.soPhong}</td>
           <td>${new Date(d.ngayDangKy).toLocaleDateString("vi-VN")}</td>
+          <td><input type="date" data-ngay-vao="${d.id}" value="${homNayISO()}" style="padding:4px 6px"></td>
           <td style="display:flex; gap:8px;">
             <button class="btn btn-primary" data-duyet="${d.id}">Duyệt</button>
             <button class="btn btn-outline" data-tuchoi="${d.id}">Từ chối</button>
@@ -75,13 +76,21 @@ async function renderQlChoDuyet(el) {
         </tr>`).join("") + `</tbody></table>`;
 
     box.querySelectorAll("[data-duyet]").forEach(btn => btn.addEventListener("click", async () => {
-      try { await api(`/api/quan-ly-toa-nha/xet-duyet/${btn.dataset.duyet}`, "POST", { dongY: true, ghiChu: "" }); toast("Đã duyệt và xếp giường."); load(); }
-      catch (err) { toast(err.message, true); }
+      // Khoa ca 2 nut cua don nay ngay khi bam de khong gui 2 yeu cau
+      box.querySelectorAll(`[data-duyet="${btn.dataset.duyet}"], [data-tuchoi="${btn.dataset.duyet}"]`).forEach(b => b.disabled = true);
+      btn.textContent = "Đang xử lý...";
+      try { await api(`/api/quan-ly-toa-nha/xet-duyet/${btn.dataset.duyet}`, "POST", { dongY: true, ghiChu: "", ngayVaoO: box.querySelector(`[data-ngay-vao="${btn.dataset.duyet}"]`).value || null }); toast("Đã duyệt và xếp giường."); load(); }
+      catch (err) {
+        toast(err.message, true);
+        // Loi (vi du don da duoc duyet): nap lai danh sach de thay trang thai that
+        load();
+      }
     }));
     box.querySelectorAll("[data-tuchoi]").forEach(btn => btn.addEventListener("click", async () => {
       const ghiChu = prompt("Lý do từ chối (không bắt buộc):") || "";
+      box.querySelectorAll(`[data-duyet="${btn.dataset.tuchoi}"], [data-tuchoi="${btn.dataset.tuchoi}"]`).forEach(b => b.disabled = true);
       try { await api(`/api/quan-ly-toa-nha/xet-duyet/${btn.dataset.tuchoi}`, "POST", { dongY: false, ghiChu }); toast("Đã từ chối đơn."); load(); }
-      catch (err) { toast(err.message, true); }
+      catch (err) { toast(err.message, true); load(); }
     }));
   };
 
@@ -146,6 +155,17 @@ async function renderQlTaoPhong(el) {
   });
 }
 
+function homNayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function ngayVN(iso) {
+  if (!iso) return "—";
+  const [y, m, d] = String(iso).split("-");
+  return d ? `${d}/${m}/${y}` : iso;
+}
+
 async function renderQlChiSo(el) {
   const picker = await currentToaNhaPicker(el);
   const now = new Date();
@@ -170,8 +190,23 @@ async function renderQlChiSo(el) {
           <label>Chỉ số nước mới (m3)<input type="number" id="cs-nuoc" min="0" step="any" required></label>
         </div>
         <p class="panel-desc" id="cs-goi-y"></p>
+        <div id="cs-cu-dan" class="panel-desc" style="margin-bottom:12px"></div>
         <button class="btn btn-primary" type="submit">Ghi chỉ số &amp; tạo hóa đơn</button>
       </form>`;
+
+    let cuDanToaNha = [];
+    try { cuDanToaNha = await api(`/api/quan-ly-toa-nha/cu-dan/${toaNhaId}`); } catch (e) { /* bo qua */ }
+    const hienCuDan = () => {
+      const soPhong = phongs.find(p => String(p.id) === document.getElementById("cs-phong").value)?.soPhong;
+      const ds = cuDanToaNha.filter(c => c.soPhong === soPhong);
+      document.getElementById("cs-cu-dan").innerHTML = ds.length
+        ? `<strong>Sinh viên đang ở phòng này (để chia hóa đơn):</strong><ul style="margin:6px 0 0 18px">`
+          + ds.map(c => `<li>${c.hoTen} (giường ${c.kyHieuGiuong}) — vào ở từ <strong>${ngayVN(c.ngayBatDau)}</strong>${c.ngayKetThuc ? ", đến " + ngayVN(c.ngayKetThuc) : ""}</li>`).join("")
+          + `</ul>`
+        : "Phòng này hiện chưa có sinh viên đang ở.";
+    };
+    document.getElementById("cs-phong").addEventListener("change", hienCuDan);
+    hienCuDan();
 
     const capNhatGoiY = async () => {
       const goiY = document.getElementById("cs-goi-y");
@@ -241,11 +276,12 @@ async function renderQlCuDan(el) {
     const box = document.getElementById("cu-dan-list");
     if (!list.length) { box.innerHTML = `<p class="empty-state">Chưa có sinh viên nào ở trong tòa nhà này.</p>`; return; }
     box.innerHTML = `<table class="data-table"><thead><tr>
-        <th>Họ tên</th><th>MSSV</th><th>Phòng</th><th>Giường</th><th>Liên hệ</th><th>Vi phạm</th><th></th>
+        <th>Họ tên</th><th>MSSV</th><th>Phòng</th><th>Giường</th><th>Ngày vào ở</th><th>Liên hệ</th><th>Vi phạm</th><th></th>
       </tr></thead><tbody>` +
       list.map(s => `<tr>
           <td>${s.hoTen}</td><td class="num">${s.mssv || "—"}</td>
           <td>P.${s.soPhong}</td><td>${s.kyHieuGiuong}</td>
+          <td>${ngayVN(s.ngayBatDau)}${s.ngayKetThuc ? `<div class="panel-desc">đến ${ngayVN(s.ngayKetThuc)}</div>` : ""}</td>
           <td>${s.soDienThoai || s.email || "—"}</td>
           <td class="num">${s.soLanViPham > 0 ? `<span class="tag tag-quahan">${s.soLanViPham} lần</span>` : "0"}</td>
           <td style="display:flex; gap:6px;">
@@ -323,7 +359,7 @@ async function renderQlHoaDon(el) {
           <td class="num"><strong>${tienVND(h.tongTien)}</strong></td>
           <td>${(theoHoaDon[h.id] || []).map(c => `<div>${c.hoTen}: ${tienVND(c.tongTien)} — ${c.trangThai === "DA_THANH_TOAN"
               ? `<span class="tag tag-duyet">Đã thanh toán (${c.hinhThuc === "VNPay" ? "VNPay" : "tiền mặt"})</span>`
-              : `<span class="tag tag-cho">Chưa thanh toán</span>`}</div>`).join("") || "—"}</td>
+              : `<span class="tag tag-cho">Chưa thanh toán</span> <button class="btn btn-outline" style="padding:2px 8px" data-thu-sv="${c.id}" data-ten-sv="${c.hoTen}">Thu tiền mặt</button>`}</div>`).join("") || "—"}</td>
           <td>${tagHoaDon(h.trangThai)}</td>
           <td style="display:flex; gap:6px;">
             <button class="btn btn-outline" data-pdf="${h.id}" data-phong="${h.phong.soPhong}" data-ky="${h.thang}_${h.nam}">PDF</button>
@@ -336,6 +372,12 @@ async function renderQlHoaDon(el) {
     box.querySelectorAll("[data-pdf]").forEach(btn => btn.addEventListener("click",
       () => taiFile(`/api/quan-ly-toa-nha/hoa-don/${btn.dataset.pdf}/pdf`,
                     `hoa_don_P${btn.dataset.phong}_${btn.dataset.ky}.pdf`)));
+
+    box.querySelectorAll("[data-thu-sv]").forEach(btn => btn.addEventListener("click", async () => {
+      if (!confirm(`Xác nhận đã thu tiền mặt phần của ${btn.dataset.tenSv}?`)) return;
+      try { await api(`/api/quan-ly-toa-nha/hoa-don-ca-nhan/${btn.dataset.thuSv}/thu-tien-mat`, "POST"); toast("Đã ghi nhận thu tiền."); load(); }
+      catch (err) { toast(err.message, true); }
+    }));
 
     box.querySelectorAll("[data-xoa]").forEach(btn => btn.addEventListener("click", async () => {
       const daTra = (theoHoaDon[btn.dataset.xoa] || []).filter(c => c.trangThai === "DA_THANH_TOAN").length;

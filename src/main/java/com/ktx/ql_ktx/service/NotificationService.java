@@ -9,6 +9,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,16 +95,36 @@ public class NotificationService {
             log.warn("Khong gui duoc email: nguoi dung id={} chua co email", nguoiNhan.getId());
             return;
         }
+        final String den = nguoiNhan.getEmail();
+        // Gui o luong rieng, va chi sau khi giao dich DB da commit: thao tac duyet/tao hoa don
+        // khong bi cham boi SMTP, va khong gui thu neu giao dich bi huy.
+        Runnable guiThu = () -> NOI_GUI.submit(() -> guiThuThat(den, tieuDe, noiDung));
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCommit() { guiThu.run(); }
+            });
+        } else {
+            guiThu.run();
+        }
+    }
+
+    private static final ExecutorService NOI_GUI = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "ktx-mail");
+        t.setDaemon(true);
+        return t;
+    });
+
+    private void guiThuThat(String den, String tieuDe, String noiDung) {
         try {
             MimeMessage mime = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mime, false, "UTF-8");
             helper.setFrom(tuDiaChi);
-            helper.setTo(nguoiNhan.getEmail());
+            helper.setTo(den);
             helper.setSubject(tieuDe);
             helper.setText(noiDung, false);
             mailSender.send(mime);
         } catch (Exception e) {
-            log.warn("Gui email that bai toi {}: {}", nguoiNhan.getEmail(), e.getMessage());
+            log.warn("Gui email that bai toi {}: {}", den, e.getMessage());
         }
     }
 }
