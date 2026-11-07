@@ -34,9 +34,9 @@ async function renderSvTongQuan(el) {
   }
 
   // Dung optional chaining (?.) de khong lam vo trang neu du lieu long nhau bi thieu
-  const tenToaNha = hdHienTai?.giuong?.phong?.toaNha?.tenToaNha;
-  const soPhong = hdHienTai?.giuong?.phong?.soPhong;
-  const kyHieu = hdHienTai?.giuong?.kyHieu;
+  const tenToaNha = hdHienTai?.tenToaNha;
+  const soPhong = hdHienTai?.soPhong;
+  const kyHieu = hdHienTai?.kyHieuGiuong;
 
   el.innerHTML = `
     <div class="panel">
@@ -44,7 +44,7 @@ async function renderSvTongQuan(el) {
       ${hdHienTai
         ? (tenToaNha
             ? `<p class="panel-desc">Bạn đang ở <strong>${tenToaNha} — Phòng ${soPhong}</strong>,
-               giường <strong>${kyHieu}</strong>, từ ngày ${hdHienTai.ngayBatDau}.</p>`
+               giường <strong>${kyHieu}</strong>, từ ngày ${ngayHT(hdHienTai.ngayBatDau)}.</p>`
             : `<p class="panel-desc">Bạn đang có hợp đồng ở hiệu lực nhưng hệ thống thiếu dữ liệu chi tiết phòng.
                Vui lòng liên hệ ban quản lý để kiểm tra lại.</p>`)
         : `<p class="panel-desc">Bạn chưa có chỗ ở. Hãy vào mục <strong>Đăng ký phòng</strong> để chọn phòng còn trống.</p>`}
@@ -140,17 +140,25 @@ async function renderSvDangKy(el) {
       </tr>`).join("") + `</tbody></table></div>`;
 }
 
+function ngayHT(iso) {
+  if (!iso) return "—";
+  const [y, m, d] = String(iso).split("-");
+  return d ? `${d}/${m}/${y}` : iso;
+}
+
 async function renderSvHopDong(el) {
   const list = await api("/api/sinh-vien/hop-dong");
   if (!list.length) { el.innerHTML = `<p class="empty-state">Bạn chưa có hợp đồng ở nào.</p>`; return; }
+  const lyDo = { TRA_PHONG: "Trả phòng", CHUYEN_PHONG: "Chuyển phòng" };
   el.innerHTML = `<div class="panel"><table class="data-table"><thead><tr>
-      <th>Phòng</th><th>Giường</th><th>Ngày bắt đầu</th><th>Trạng thái</th>
+      <th>Phòng</th><th>Giường</th><th>Ngày bắt đầu</th><th>Ngày kết thúc</th><th>Trạng thái</th>
     </tr></thead><tbody>` +
     list.map(h => `<tr>
-        <td>${h.giuong?.phong?.toaNha?.tenToaNha ?? "—"} — P.${h.giuong?.phong?.soPhong ?? "—"}</td>
-        <td>${h.giuong?.kyHieu ?? "—"}</td>
-        <td>${h.ngayBatDau}</td>
-        <td>${h.conHieuLuc ? '<span class="tag tag-duyet">Đang hiệu lực</span>' : '<span class="tag tag-day">Đã kết thúc</span>'}</td>
+        <td>${h.tenToaNha ?? "—"} — P.${h.soPhong ?? "—"}</td>
+        <td>${h.kyHieuGiuong ?? "—"}</td>
+        <td>${ngayHT(h.ngayBatDau)}</td>
+        <td>${h.conHieuLuc ? (h.ngayKetThuc ? ngayHT(h.ngayKetThuc) + " (dự kiến)" : "—") : ngayHT(h.ngayTraThucTe)}</td>
+        <td>${h.conHieuLuc ? '<span class="tag tag-duyet">Đang hiệu lực</span>' : `<span class="tag tag-day">Đã kết thúc${h.lyDoKetThuc ? " — " + (lyDo[h.lyDoKetThuc] || h.lyDoKetThuc) : ""}</span>`}</td>
       </tr>`).join("") + `</tbody></table></div>`;
 }
 
@@ -239,4 +247,3 @@ async function renderSvViPham(el) {
         <td>${v.nguoiLap ? v.nguoiLap.hoTen : "—"}</td>
       </tr>`).join("") + `</tbody></table></div>`;
 }
-

@@ -2,6 +2,7 @@ package com.ktx.ql_ktx.controller;
 
 import com.ktx.ql_ktx.entity.HoaDon;
 import com.ktx.ql_ktx.entity.HoaDonCaNhan;
+import com.ktx.ql_ktx.entity.HopDong;
 import com.ktx.ql_ktx.entity.NguoiDung;
 import com.ktx.ql_ktx.entity.ToaNha;
 import com.ktx.ql_ktx.repository.HopDongRepository;
@@ -76,7 +77,18 @@ public class SinhVienController {
     @GetMapping("/hop-dong")
     public ResponseEntity<?> hopDongCuaToi(Authentication auth) {
         NguoiDung sv = nguoiDungHienTai(auth);
-        return ResponseEntity.ok(hopDongRepository.findBySinhVienId(sv.getId()));
+        var ketQua = hopDongRepository.findBySinhVienId(sv.getId()).stream()
+                .sorted(java.util.Comparator.comparing(HopDong::getNgayBatDau).reversed())
+                .map(h -> new com.ktx.ql_ktx.dto.HopDongCuaToiResponse(
+                        h.getId(),
+                        h.getGiuong().getPhong().getToaNha().getTenToaNha(),
+                        h.getGiuong().getPhong().getSoPhong(),
+                        h.getGiuong().getKyHieu(),
+                        h.getNgayBatDau(), h.getNgayKetThuc(), h.getNgayTraThucTe(),
+                        h.isConHieuLuc(),
+                        h.getLyDoKetThuc() != null ? h.getLyDoKetThuc().name() : null))
+                .toList();
+        return ResponseEntity.ok(ketQua);
     }
 
     /** Xem hoa don cua phong minh dang o (sinh vien tim phong qua hop dong hien hanh) */

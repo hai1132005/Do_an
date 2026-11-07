@@ -32,6 +32,7 @@ public class MeController {
         String toaNhaTen = nd.getToaNhaPhuTrach() != null ? nd.getToaNhaPhuTrach().getTenToaNha() : null;
 
         return ResponseEntity.ok(new NguoiDungInfoResponse(
-                nd.getId(), nd.getHoTen(), nd.getMssv(), nd.getVaiTro(), toaNhaId, toaNhaTen));
+                nd.getId(), nd.getTenDangNhap(), nd.getHoTen(), nd.getMssv(), nd.getEmail(),
+                nd.getSoDienThoai(), nd.getVaiTro(), toaNhaId, toaNhaTen, nd.isActive()));
     }
 }

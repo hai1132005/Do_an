@@ -113,7 +113,7 @@ async function khoiDongTrang(vaiTroChoPhep, layNhomMenu) {
   state.userId = info.id;
   state.mssv = info.mssv;
   state.toaNhaId = info.toaNhaPhuTrachId;
-  state.toaNhaTen = info.toaNhaPhuTrachTen;
+  state.toaNhaTen = info.tenToaNhaPhuTrach || info.toaNhaPhuTrachTen;
 
   document.getElementById("user-name").textContent = state.hoTen;
   document.getElementById("user-role").textContent = nhanVaiTro(state.vaiTro);
